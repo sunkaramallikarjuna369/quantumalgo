@@ -8,10 +8,11 @@ import { Progress } from '@/components/ui/progress'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import { CheckCircle2, Circle, Copy, BookOpen, Code, Lightbulb, Rocket, ArrowRight, Menu, X, Eye } from 'lucide-react'
+import { CheckCircle2, Circle, Copy, BookOpen, Code, Lightbulb, Rocket, ArrowRight, Menu, X, Eye, Sparkles } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { QuickVisualization } from '@/components/visualizations'
 import type { CircuitExampleKey } from '@/components/visualizations'
+import { KidsModeToggle, KidsModuleHeader, KidsExplanations } from '@/components/KidsFriendlyContent'
 
 interface Module {
   id: number
@@ -1390,6 +1391,14 @@ function App() {
   )
   const [showSidebar, setShowSidebar] = useState(true)
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
+    const [isKidsMode, setIsKidsMode] = useState<boolean>(
+      () => JSON.parse(localStorage.getItem('isKidsMode') || 'false')
+    )
+    const [showCodeInKidsMode, setShowCodeInKidsMode] = useState(false)
+
+    useEffect(() => {
+      localStorage.setItem('isKidsMode', JSON.stringify(isKidsMode))
+    }, [isKidsMode])
 
   useEffect(() => {
     localStorage.setItem('completedModules', JSON.stringify(Array.from(completedModules)))
@@ -1437,6 +1446,7 @@ function App() {
               </div>
             </div>
             <div className="hidden md:flex items-center gap-4">
+              <KidsModeToggle isKidsMode={isKidsMode} onToggle={() => setIsKidsMode(!isKidsMode)} />
               <div className="text-right">
                 <p className="text-sm text-slate-400">Progress</p>
                 <p className="text-lg font-bold text-blue-400">{completedModules.size}/{modules.length} Modules</p>
@@ -1533,33 +1543,62 @@ function App() {
               </CardHeader>
             </Card>
 
-            {/* Topics Covered */}
-            <Card className="bg-slate-900/50 border-blue-900/50">
+            {/* Kids Mode Header and Explanations */}
+            {isKidsMode && (
+              <div className="space-y-6">
+                <KidsModuleHeader moduleId={modules[currentModule].id} />
+                <KidsExplanations moduleId={modules[currentModule].id} />
+              </div>
+            )}
+
+            {/* Topics Covered - shown in both modes but styled differently */}
+            <Card className={`${isKidsMode ? 'bg-gradient-to-br from-indigo-900/30 to-purple-900/30 border-indigo-500/30' : 'bg-slate-900/50 border-blue-900/50'}`}>
               <CardHeader>
-                <CardTitle className="text-xl">Topics Covered</CardTitle>
+                <CardTitle className={`text-xl ${isKidsMode ? 'flex items-center gap-2' : ''}`}>
+                  {isKidsMode && <Sparkles className="h-5 w-5 text-yellow-400" />}
+                  {isKidsMode ? "What You'll Learn" : "Topics Covered"}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {modules[currentModule].topics.map((topic, index) => (
                     <div key={index} className="flex items-start gap-2">
-                      <ArrowRight className="h-4 w-4 text-blue-400 flex-shrink-0 mt-1" />
-                      <span className="text-sm text-slate-300">{topic}</span>
+                      <ArrowRight className={`h-4 w-4 flex-shrink-0 mt-1 ${isKidsMode ? 'text-purple-400' : 'text-blue-400'}`} />
+                      <span className={`text-sm ${isKidsMode ? 'text-slate-200' : 'text-slate-300'}`}>{topic}</span>
                     </div>
                   ))}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Code Examples */}
-            <Card className="bg-slate-900/50 border-blue-900/50">
+            {/* Code Examples - collapsible in Kids Mode */}
+            <Card className={`${isKidsMode ? 'bg-orange-950/20 border-orange-900/50' : 'bg-slate-900/50 border-blue-900/50'}`}>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Code className="h-5 w-5 text-blue-400" />
-                  Code Examples
-                </CardTitle>
-                <CardDescription>Compare Qiskit and Braket implementations side-by-side</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Code className={`h-5 w-5 ${isKidsMode ? 'text-orange-400' : 'text-blue-400'}`} />
+                      {isKidsMode ? 'Advanced: Python Code (Optional)' : 'Code Examples'}
+                    </CardTitle>
+                    <CardDescription>
+                      {isKidsMode 
+                        ? "Want to see how programmers write this? Click to expand!" 
+                        : "Compare Qiskit and Braket implementations side-by-side"}
+                    </CardDescription>
+                  </div>
+                  {isKidsMode && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowCodeInKidsMode(!showCodeInKidsMode)}
+                      className="border-orange-500/50 text-orange-300 hover:bg-orange-950/50"
+                    >
+                      {showCodeInKidsMode ? 'Hide Code' : 'Show Code'}
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
-              <CardContent>
+              {(!isKidsMode || showCodeInKidsMode) && <CardContent>
                 <Tabs defaultValue="qiskit" className="w-full">
                   <TabsList className="grid w-full grid-cols-2 mb-4">
                     <TabsTrigger value="qiskit">Qiskit</TabsTrigger>
@@ -1636,7 +1675,7 @@ function App() {
                     ))}
                   </TabsContent>
                 </Tabs>
-              </CardContent>
+              </CardContent>}
             </Card>
 
             {/* Interactive Visualizations */}
