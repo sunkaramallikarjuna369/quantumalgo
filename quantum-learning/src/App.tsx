@@ -8,8 +8,10 @@ import { Progress } from '@/components/ui/progress'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import { CheckCircle2, Circle, Copy, BookOpen, Code, Lightbulb, Rocket, ArrowRight, Menu, X } from 'lucide-react'
+import { CheckCircle2, Circle, Copy, BookOpen, Code, Lightbulb, Rocket, ArrowRight, Menu, X, Eye } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { QuickVisualization } from '@/components/visualizations'
+import type { CircuitExampleKey } from '@/components/visualizations'
 
 interface Module {
   id: number
@@ -21,6 +23,7 @@ interface Module {
   exercises: { question: string; hint: string }[]
   commonMistakes: string[]
   keyTakeaways: string[]
+  visualizations?: CircuitExampleKey[]
 }
 
 const modules: Module[] = [
@@ -160,7 +163,8 @@ print(counts)
       "Simulators let you test circuits before running on real hardware",
       "Qiskit and Braket have similar concepts but different APIs",
       "Always specify classical registers to store measurement results"
-    ]
+    ],
+    visualizations: ['superposition', 'bellState']
   },
   {
     id: 2,
@@ -283,7 +287,8 @@ print(circuit)`,
       "Any single-qubit gate can be decomposed into rotations",
       "Phase gates (S, T) are important for quantum algorithms",
       "Understanding Bloch sphere helps visualize quantum states"
-    ]
+    ],
+    visualizations: ['pauliGates', 'singleQubitRotations']
   },
   {
     id: 3,
@@ -423,7 +428,8 @@ print(circuit)`,
       "Bell states are the building blocks of quantum protocols",
       "Controlled gates are essential for quantum algorithms",
       "Toffoli gate enables reversible classical computation"
-    ]
+    ],
+    visualizations: ['bellState', 'ghzState']
   },
   {
     id: 4,
@@ -558,7 +564,8 @@ print(circuit)`,
       "Ancillas are temporary workspace that must be cleaned up",
       "Reversible computation is fundamental to quantum algorithms",
       "Oracle design uses these patterns extensively"
-    ]
+    ],
+    visualizations: ['phaseKickback']
   },
   {
     id: 5,
@@ -761,7 +768,8 @@ print(grover_search('11'))`,
       "Grover provides quadratic speedup for unstructured search",
       "Oracle design is key: must mark target states with phase",
       "Number of iterations matters: too few or too many reduces success probability"
-    ]
+    ],
+    visualizations: ['grover2Qubit']
   },
   {
     id: 6,
@@ -1630,6 +1638,26 @@ function App() {
                 </Tabs>
               </CardContent>
             </Card>
+
+            {/* Interactive Visualizations */}
+            {modules[currentModule].visualizations && modules[currentModule].visualizations!.length > 0 && (
+              <Card className="bg-slate-900/50 border-purple-900/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Eye className="h-5 w-5 text-purple-400" />
+                    Interactive 3D Visualizations
+                  </CardTitle>
+                  <CardDescription>
+                    Watch quantum states evolve step-by-step on the Bloch sphere
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {modules[currentModule].visualizations!.map((vizKey) => (
+                    <QuickVisualization key={vizKey} exampleKey={vizKey} />
+                  ))}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Exercises */}
             <Card className="bg-slate-900/50 border-blue-900/50">
