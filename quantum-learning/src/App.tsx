@@ -12,7 +12,8 @@ import { CheckCircle2, Circle, Copy, BookOpen, Code, Lightbulb, Rocket, ArrowRig
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { QuickVisualization } from '@/components/visualizations'
 import type { CircuitExampleKey } from '@/components/visualizations'
-import { KidsModeToggle, KidsModuleHeader, KidsExplanations } from '@/components/KidsFriendlyContent'
+import { KidsModeToggle, KidsModuleHeader } from '@/components/KidsFriendlyContent'
+import { SuperKidsModule } from '@/components/SuperKidsContent'
 
 interface Module {
   id: number
@@ -1543,11 +1544,11 @@ function App() {
               </CardHeader>
             </Card>
 
-            {/* Kids Mode Header and Explanations */}
+            {/* Kids Mode - Super Detailed Explanations with Before/After Visualizations */}
             {isKidsMode && (
               <div className="space-y-6">
                 <KidsModuleHeader moduleId={modules[currentModule].id} />
-                <KidsExplanations moduleId={modules[currentModule].id} />
+                <SuperKidsModule moduleId={modules[currentModule].id} />
               </div>
             )}
 
