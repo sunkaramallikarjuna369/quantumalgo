@@ -1380,6 +1380,319 @@ print(circuit)
       "Noise is unavoidable: design with it in mind",
       "Best practices: minimize depth, use native gates, test thoroughly"
     ]
+  },
+  {
+    id: 9,
+    title: "Quantum Stockout Prediction",
+    description: "Apply quantum computing to predict service stockouts using VQC, quantum feature maps, and QAOA for supply chain optimization",
+    topics: [
+      "Service stockout problem formulation",
+      "Quantum feature maps for encoding service metrics",
+      "Variational Quantum Classifier (VQC) for prediction",
+      "QAOA for supply chain / inventory optimization",
+      "Hybrid quantum-classical prediction pipeline",
+      "Real-world considerations: Google Cloud outage patterns"
+    ],
+    qiskitCode: [
+      {
+        title: "Quantum Feature Map for Service Metrics",
+        code: `from qiskit import QuantumCircuit
+from qiskit.circuit import ParameterVector
+import numpy as np
+
+def service_metric_feature_map(n_features=4):
+    """
+    Encode service metrics into quantum states.
+    Features: CPU usage, memory, request rate, error rate
+    """
+    n_qubits = n_features
+    qc = QuantumCircuit(n_qubits)
+    x = ParameterVector('x', n_features)
+    
+    # First-order encoding: RY rotations
+    for i in range(n_qubits):
+        qc.h(i)
+        qc.ry(x[i], i)
+    
+    # Second-order encoding: entangling feature interactions
+    for i in range(n_qubits - 1):
+        qc.cx(i, i + 1)
+        qc.rz(x[i] * x[i + 1], i + 1)
+        qc.cx(i, i + 1)
+    
+    # Circular entanglement (last to first)
+    qc.cx(n_qubits - 1, 0)
+    qc.rz(x[n_qubits - 1] * x[0], 0)
+    qc.cx(n_qubits - 1, 0)
+    
+    return qc
+
+# Create feature map for 4 service metrics
+feature_map = service_metric_feature_map(4)
+print(feature_map)
+print("\\nDepth:", feature_map.depth())
+print("Parameters:", feature_map.parameters)`,
+        explanation: "Service metrics (CPU, memory, request rate, error rate) are encoded into quantum states using rotation gates. Second-order encoding captures interactions between metrics (e.g., high CPU + high error rate = stockout risk). This quantum feature map can represent exponentially complex feature interactions."
+      },
+      {
+        title: "VQC for Stockout Prediction",
+        code: `from qiskit import QuantumCircuit, Aer, execute
+from qiskit.circuit import ParameterVector
+import numpy as np
+
+def stockout_vqc(n_qubits=4, n_layers=2):
+    """
+    Variational Quantum Classifier for stockout prediction.
+    Output: probability of stockout (qubit 0 measurement)
+    """
+    qc = QuantumCircuit(n_qubits, 1)
+    
+    # Feature encoding parameters
+    x = ParameterVector('x', n_qubits)
+    # Variational parameters
+    theta = ParameterVector('theta', n_qubits * n_layers * 3)
+    
+    # Feature map: encode service metrics
+    for i in range(n_qubits):
+        qc.h(i)
+        qc.ry(x[i], i)
+    
+    # Entangling feature interactions
+    for i in range(n_qubits - 1):
+        qc.cx(i, i + 1)
+    
+    # Variational layers (trainable)
+    param_idx = 0
+    for layer in range(n_layers):
+        # Rotation layer
+        for i in range(n_qubits):
+            qc.ry(theta[param_idx], i)
+            param_idx += 1
+            qc.rz(theta[param_idx], i)
+            param_idx += 1
+            qc.ry(theta[param_idx], i)
+            param_idx += 1
+        
+        # Entangling layer
+        for i in range(n_qubits - 1):
+            qc.cx(i, i + 1)
+        qc.cx(n_qubits - 1, 0)  # circular
+    
+    # Measure first qubit for classification
+    qc.measure(0, 0)
+    return qc, x, theta
+
+# Build the classifier
+qc, features, params = stockout_vqc(4, 2)
+print("VQC Circuit:")
+print(f"Feature params: {len(features)}")
+print(f"Trainable params: {len(params)}")
+print(f"Circuit depth: {qc.depth()}")
+
+# Training loop (simplified)
+def train_stockout_predictor(training_data, labels):
+    """
+    training_data: [[cpu, mem, req_rate, err_rate], ...]
+    labels: [0=normal, 1=stockout, ...]
+    """
+    from scipy.optimize import minimize
+    backend = Aer.get_backend('qasm_simulator')
+    
+    def cost_function(theta_vals):
+        total_cost = 0
+        for data, label in zip(training_data, labels):
+            # Bind parameters
+            param_dict = dict(zip(features, data))
+            param_dict.update(dict(zip(params, theta_vals)))
+            bound_qc = qc.assign_parameters(param_dict)
+            
+            # Run circuit
+            result = execute(bound_qc, backend, shots=1024).result()
+            counts = result.get_counts()
+            
+            # P(stockout) = probability of measuring |1>
+            p_stockout = counts.get('1', 0) / 1024
+            
+            # Binary cross-entropy loss
+            eps = 1e-10
+            cost = -(label * np.log(p_stockout + eps) + 
+                    (1-label) * np.log(1-p_stockout + eps))
+            total_cost += cost
+        
+        return total_cost / len(training_data)
+    
+    # Optimize
+    init_params = np.random.rand(len(params)) * 2 * np.pi
+    result = minimize(cost_function, init_params, method='COBYLA',
+                     options={'maxiter': 100})
+    return result.x
+
+# Example: predict stockout
+# Features: [cpu_usage, memory_usage, request_rate, error_rate]
+# Normalized to [0, pi] range
+sample_data = [
+    [2.8, 2.5, 2.9, 2.7],  # High load -> stockout
+    [0.3, 0.5, 0.4, 0.1],  # Normal load
+]
+sample_labels = [1, 0]
+print("\\nReady to train on service metric data!")`,
+        explanation: "The VQC classifies service states as 'normal' or 'stockout risk'. Feature encoding maps metrics to quantum states. Variational layers learn decision boundaries. Quantum advantage: can capture complex nonlinear correlations between metrics that classical models might miss, especially with high-dimensional feature interactions."
+      }
+    ],
+    braketCode: [
+      {
+        title: "Quantum Feature Map for Service Metrics",
+        code: `from braket.circuits import Circuit, FreeParameter
+import numpy as np
+
+def service_metric_feature_map_braket(n_features=4):
+    """
+    Encode service metrics into quantum states using Braket.
+    Features: CPU usage, memory, request rate, error rate
+    """
+    circuit = Circuit()
+    
+    # Define feature parameters
+    features = [FreeParameter(f'x_{i}') for i in range(n_features)]
+    
+    # First-order encoding
+    for i in range(n_features):
+        circuit.h(i)
+        circuit.ry(i, features[i])
+    
+    # Second-order encoding: feature interactions
+    for i in range(n_features - 1):
+        circuit.cnot(i, i + 1)
+        circuit.rz(i + 1, features[i] * features[i + 1])
+        circuit.cnot(i, i + 1)
+    
+    # Circular entanglement
+    circuit.cnot(n_features - 1, 0)
+    circuit.rz(0, features[n_features - 1] * features[0])
+    circuit.cnot(n_features - 1, 0)
+    
+    return circuit, features
+
+circuit, features = service_metric_feature_map_braket(4)
+print(circuit)
+print(f"\\nFree parameters: {circuit.parameters}")`,
+        explanation: "Same quantum feature map in Braket. Uses FreeParameter for parameterized encoding. The entangling structure captures correlations between service metrics that signal stockout risk."
+      },
+      {
+        title: "VQC for Stockout Prediction",
+        code: `from braket.circuits import Circuit, FreeParameter
+from braket.devices import LocalSimulator
+import numpy as np
+
+def stockout_vqc_braket(n_qubits=4, n_layers=2):
+    """
+    Variational Quantum Classifier for stockout prediction.
+    """
+    circuit = Circuit()
+    
+    # Feature parameters
+    features = [FreeParameter(f'x_{i}') for i in range(n_qubits)]
+    
+    # Variational parameters
+    thetas = []
+    for l in range(n_layers):
+        for i in range(n_qubits):
+            for g in range(3):
+                thetas.append(FreeParameter(f'theta_{l}_{i}_{g}'))
+    
+    # Feature map
+    for i in range(n_qubits):
+        circuit.h(i)
+        circuit.ry(i, features[i])
+    
+    # Entangling features
+    for i in range(n_qubits - 1):
+        circuit.cnot(i, i + 1)
+    
+    # Variational layers
+    param_idx = 0
+    for layer in range(n_layers):
+        for i in range(n_qubits):
+            circuit.ry(i, thetas[param_idx])
+            param_idx += 1
+            circuit.rz(i, thetas[param_idx])
+            param_idx += 1
+            circuit.ry(i, thetas[param_idx])
+            param_idx += 1
+        
+        for i in range(n_qubits - 1):
+            circuit.cnot(i, i + 1)
+        circuit.cnot(n_qubits - 1, 0)
+    
+    # Measure qubit 0 for classification
+    circuit.measure(0)
+    
+    return circuit, features, thetas
+
+circuit, features, thetas = stockout_vqc_braket(4, 2)
+print("VQC Circuit for Stockout Prediction:")
+print(f"Feature params: {len(features)}")
+print(f"Trainable params: {len(thetas)}")
+
+# Prediction function
+def predict_stockout(circuit, features, thetas, 
+                     feature_vals, theta_vals):
+    """
+    Predict stockout probability for given metrics.
+    """
+    inputs = {}
+    for f, v in zip(features, feature_vals):
+        inputs[f.name] = v
+    for t, v in zip(thetas, theta_vals):
+        inputs[t.name] = v
+    
+    device = LocalSimulator()
+    result = device.run(circuit, shots=1024, 
+                       inputs=inputs).result()
+    counts = result.measurement_counts
+    
+    p_stockout = counts.get('1', 0) / 1024
+    return p_stockout
+
+# Example prediction
+# High load scenario: [cpu=90%, mem=85%, req=95%, err=80%]
+# Mapped to [0, pi]: multiply by pi
+print("\\nReady for stockout prediction!")
+print("Feed normalized service metrics to predict outages")`,
+        explanation: "Complete VQC pipeline in Braket. The classifier maps service metrics through quantum feature encoding, then variational layers learn stockout patterns. The measurement probability directly gives stockout risk."
+      }
+    ],
+    exercises: [
+      {
+        question: "Design a quantum feature map that encodes 6 Google Cloud service metrics (CPU, memory, network I/O, disk I/O, request latency, error rate). How would you handle the increased qubit requirements?",
+        hint: "Use amplitude encoding for efficiency (log2(N) qubits for N features), or use a 6-qubit circuit with selective second-order interactions for the most correlated feature pairs."
+      },
+      {
+        question: "Implement a QAOA circuit for inventory optimization: given 4 services with different demand patterns, minimize total stockout risk while respecting resource constraints.",
+        hint: "Formulate as a QUBO problem. Cost Hamiltonian encodes stockout penalties, constraint Hamiltonian enforces resource limits. Use p=2 QAOA layers."
+      },
+      {
+        question: "Compare the VQC stockout predictor with a classical Random Forest on the same dataset. When does quantum offer an advantage?",
+        hint: "Quantum advantage appears with high-dimensional feature interactions and limited training data. Classical models need exponentially more data to capture the same correlations."
+      }
+    ],
+    commonMistakes: [
+      "Not normalizing service metrics to [0, pi] range before encoding",
+      "Using too many variational layers (increases noise, risk of barren plateaus)",
+      "Ignoring temporal correlations in service data (use time-windowed features)",
+      "Training on balanced data when stockouts are rare events (use oversampling)",
+      "Not accounting for quantum noise when interpreting prediction probabilities",
+      "Encoding too many features per qubit (reduces distinguishability)"
+    ],
+    keyTakeaways: [
+      "Quantum feature maps can capture exponentially complex metric interactions",
+      "VQC provides a hybrid quantum-classical approach ideal for NISQ devices",
+      "Service stockout prediction benefits from quantum's ability to model nonlinear correlations",
+      "QAOA can optimize inventory/resource allocation to prevent stockouts",
+      "Real-world deployment requires careful feature selection and noise mitigation",
+      "Quantum advantage grows with feature dimensionality and interaction complexity"
+    ],
+    visualizations: ['stockoutVQC']
   }
 ]
 

@@ -352,6 +352,26 @@ export const circuitExamples = {
     sim.cnot(0, 2, "CNOT q0→q2: create GHZ state (|000⟩+|111⟩)/√2");
     sim.measure("Measure: all qubits same (000 or 111)");
     return sim.getSteps();
+  },
+
+  stockoutVQC: () => {
+    const sim = new QuantumSimulator(2);
+    // Feature encoding: encode 2 service metrics (CPU, error rate)
+    sim.h(0, "Feature map: H on q0 (CPU usage metric)");
+    sim.h(1, "Feature map: H on q1 (error rate metric)");
+    sim.ry(0, Math.PI * 0.85, "Encode CPU=85%: RY(0.85π) on q0");
+    sim.ry(1, Math.PI * 0.72, "Encode error_rate=72%: RY(0.72π) on q1");
+    // Entangle features (capture metric interactions)
+    sim.cnot(0, 1, "Entangle metrics: high CPU + high errors = risk");
+    // Variational layer 1 (trainable parameters)
+    sim.ry(0, Math.PI * 0.6, "Variational layer: RY on q0 (trained weight)");
+    sim.rz(0, Math.PI * 0.3, "Variational layer: RZ on q0 (trained weight)");
+    sim.ry(1, Math.PI * 0.4, "Variational layer: RY on q1 (trained weight)");
+    sim.rz(1, Math.PI * 0.7, "Variational layer: RZ on q1 (trained weight)");
+    // Entangling layer
+    sim.cnot(0, 1, "Entangling layer: correlate learned features");
+    sim.measure("Measure q0: P(|1⟩) = stockout probability!");
+    return sim.getSteps();
   }
 };
 

@@ -177,6 +177,10 @@ export function QuickVisualization({ exampleKey }: { exampleKey: CircuitExampleK
     ghzState: {
       title: "GHZ State (3 qubits)",
       description: "Create maximally entangled 3-qubit state"
+    },
+    stockoutVQC: {
+      title: "Stockout Prediction VQC (2 qubits)",
+      description: "Watch how service metrics are encoded and classified for stockout risk"
     }
   }
 
